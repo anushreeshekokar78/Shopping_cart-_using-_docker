@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { display: flex; gap: 30px; }
+        .products, .cart { flex: 1; }
+        .product, .cart-item { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .remove-btn { background: #dc3545; }
+        .remove-btn:hover { background: #c82333; }
+        .total { font-size: 1.2em; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🛍️ Mini Shopping Cart</h1>
+    
+    <div class="container">
+        <!-- Products Section -->
+        <div class="products">
+            <h2>Available Products</h2>
+            <div id="products-list">
+                <p>Loading products...</p>
+            </div>
+        </div>
+
+        <!-- Shopping Cart Section -->
+        <div class="cart">
+            <h2>🛒 Your Cart</h2>
+            <div id="cart-items">
+                <p>Cart is empty</p>
+            </div>
+            <div id="cart-total" class="total"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+
+        // Load products on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            loadCart();
+        });
+
+        // Fetch and display products
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/products`);
+                const products = await response.json();
+                
+                const productsList = document.getElementById('products-list');
+                productsList.innerHTML = '';
+                
+                products.forEach(product => {
+                    const productDiv = document.createElement('div');
+                    productDiv.className = 'product';
+                    productDiv.innerHTML = `
+                        <h3>${product.name}</h3>
+                        <p>Price: ₹${product.price}</p>
+                        <div>
+                            <input type="number" id="qty-${product.id}" value="1" min="1" style="width: 60px; padding: 5px;">
+                            <button onclick="addToCart(${product.id})">Add to Cart</button>
+                        </div>
+                    `;
+                    productsList.appendChild(productDiv);
+                });
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        // Add product to cart
+        async function addToCart(productId) {
+            const quantity = parseInt(document.getElementById(`qty-${productId}`).value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/cart`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: quantity
+                    })
+                });
+                
+                if (response.ok) {
+                    loadCart(); // Refresh cart
+                    alert('Product added to cart!');
+                } else {
+                    alert('Error adding product to cart');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Load and display cart
+        async function loadCart() {
+            try {
+                const response = await fetch(`${API_BASE}/cart`);
+                const cart = await response.json();
+                
+                const cartItems = document.getElementById('cart-items');
+                const cartTotal = document.getElementById('cart-total');
+                
+                if (cart.items.length === 0) {
+                    cartItems.innerHTML = '<p>Cart is empty</p>';
+                    cartTotal.innerHTML = '';
+                    return;
+                }
+                
+                cartItems.innerHTML = '';
+                cart.items.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'cart-item';
+                    itemDiv.innerHTML = `
+                        <h4>${item.name}</h4>
+                        <p>Price: ₹${item.price} x ${item.quantity} = ₹${item.subtotal}</p>
+                        <button class="remove-btn" onclick="removeFromCart(${item.product_id})">Remove</button>
+                    `;
+                    cartItems.appendChild(itemDiv);
+                });
+                
+                cartTotal.innerHTML = `Total: ₹${cart.total_price}`;
+            } catch (error) {
+                console.error('Error loading cart:', error);
+            }
+        }
+
+        // Remove item from cart
+        async function removeFromCart(productId) {
+            try {
+                const response = await fetch(`${API_BASE}/cart/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadCart(); // Refresh cart
+                } else {
+                    alert('Error removing product from cart');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Auto-refresh cart every 5 seconds
+        setInterval(loadCart, 5000);
+    </script>
+</body>
+</html>

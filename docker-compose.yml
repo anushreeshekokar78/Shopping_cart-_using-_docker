@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: shopping_cart_mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb_data:/data/db
+
+  api:
+    build: .
+    container_name: shopping_cart_api
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://admin:password@mongodb:27017/
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/app
+    command: python app.py
+
+volumes:
+  mongodb_data:
